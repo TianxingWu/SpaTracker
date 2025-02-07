@@ -8,3 +8,4 @@ checkpoints
 **/*/.pt
 **/*/.mp4
 **/*/.npy
+*.pt
