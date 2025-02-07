@@ -140,6 +140,42 @@ class SpaTrackerPredictor(torch.nn.Module):
             queries[:, :, 2] *= self.interp_shape[0] / H
         elif grid_size > 0:
             grid_pts = get_points_on_a_grid(grid_size, self.interp_shape, device=video.device)
+            
+            # # v1 original: mask & no mask
+            # if segm_mask is not None:
+            #     segm_mask = F.interpolate(
+            #         segm_mask, tuple(self.interp_shape), mode="nearest"
+            #     )
+            #     point_mask = segm_mask[0, 0][
+            #         (grid_pts[0, :, 1]).round().long().cpu(),
+            #         (grid_pts[0, :, 0]).round().long().cpu(),
+            #     ].bool()
+            #     grid_pts_extra = grid_pts[:, point_mask]
+            # else:
+            #     grid_pts_extra = None
+            # # queries = torch.cat(
+            # #     [torch.ones_like(grid_pts[:, :, :1]) * grid_query_frame, grid_pts],
+            # #     dim=2,
+            # # )
+            # if grid_pts_extra is not None:
+            #     total_num = int(grid_pts_extra.shape[1])
+            #     total_num = min(800, total_num)
+            #     pick_idx = torch.randperm(grid_pts_extra.shape[1])[:total_num]
+            #     grid_pts_extra = grid_pts_extra[:, pick_idx]
+            #     queries_extra = torch.cat(
+            #         [
+            #             torch.ones_like(grid_pts_extra[:, :, :1]) * grid_query_frame,
+            #             grid_pts_extra,
+            #         ],
+            #         dim=2,
+            #     )
+            # queries = torch.cat(
+            #     [torch.randint_like(grid_pts[:, :, :1], T), grid_pts],
+            #     dim=2,
+            # )
+            # queries = torch.cat([queries, queries_extra], dim=1)
+
+            # v2 fixed: mask-only for preventing bug!
             if segm_mask is not None:
                 segm_mask = F.interpolate(
                     segm_mask, tuple(self.interp_shape), mode="nearest"
@@ -148,30 +184,32 @@ class SpaTrackerPredictor(torch.nn.Module):
                     (grid_pts[0, :, 1]).round().long().cpu(),
                     (grid_pts[0, :, 0]).round().long().cpu(),
                 ].bool()
-                grid_pts_extra = grid_pts[:, point_mask]
+                # grid_pts_extra = grid_pts[:, point_mask]
+                grid_pts = grid_pts[:, point_mask]
             else:
-                grid_pts_extra = None
-            # queries = torch.cat(
-            #     [torch.ones_like(grid_pts[:, :, :1]) * grid_query_frame, grid_pts],
-            #     dim=2,
-            # )
-            if grid_pts_extra is not None:
-                total_num = int(grid_pts_extra.shape[1])
-                total_num = min(800, total_num)
-                pick_idx = torch.randperm(grid_pts_extra.shape[1])[:total_num]
-                grid_pts_extra = grid_pts_extra[:, pick_idx]
-                queries_extra = torch.cat(
-                    [
-                        torch.ones_like(grid_pts_extra[:, :, :1]) * grid_query_frame,
-                        grid_pts_extra,
-                    ],
-                    dim=2,
-                )
+                # grid_pts_extra = None
+                raise NotImplementedError
             queries = torch.cat(
-                [torch.randint_like(grid_pts[:, :, :1], T), grid_pts],
+                [torch.ones_like(grid_pts[:, :, :1]) * grid_query_frame, grid_pts],
                 dim=2,
             )
-            queries = torch.cat([queries, queries_extra], dim=1)
+            # if grid_pts_extra is not None:
+            #     total_num = int(grid_pts_extra.shape[1])
+            #     total_num = min(800, total_num)
+            #     pick_idx = torch.randperm(grid_pts_extra.shape[1])[:total_num]
+            #     grid_pts_extra = grid_pts_extra[:, pick_idx]
+            #     queries_extra = torch.cat(
+            #         [
+            #             torch.ones_like(grid_pts_extra[:, :, :1]) * grid_query_frame,
+            #             grid_pts_extra,
+            #         ],
+            #         dim=2,
+            #     )
+            # queries = torch.cat(
+            #     [torch.randint_like(grid_pts[:, :, :1], T), grid_pts],
+            #     dim=2,
+            # )
+            # queries = torch.cat([queries, queries_extra], dim=1)
 
         if add_support_grid:
             grid_pts = get_points_on_a_grid(self.support_grid_size, self.interp_shape, device=video.device)
